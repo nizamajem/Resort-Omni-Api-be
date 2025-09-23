@@ -1,0 +1,4 @@
+regex:(?i)^MIDTRANS_SERVER_KEY\s*=.*$==>MIDTRANS_SERVER_KEY=REDACTED
+regex:(?i)^MIDTRANS_CLIENT_KEY\s*=.*$==>MIDTRANS_CLIENT_KEY=REDACTED
+regex:SB-Mid-server-[A-Za-z0-9_-]+==>REDACTED
+regex:Mid-server-[A-Za-z0-9_-]+==>REDACTED
