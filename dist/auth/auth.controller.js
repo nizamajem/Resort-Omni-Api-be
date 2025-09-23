@@ -33,7 +33,7 @@ let AuthController = class AuthController {
             { email: 'resort2@demo.id', password: 'resort123', role: 'resort', resortName: 'Re:Flow Hill Resort' },
             { email: 'resort3@demo.id', password: 'resort123', role: 'resort', resortName: 'Sunset Bay Villas' },
         ];
-        const bi = builtin.find((a) => a.email.toLowerCase() === String(email).toLowerCase());
+        const bi = builtin.find((a) => a.email && a.email.toLowerCase() === String(email).toLowerCase());
         if (bi && bi.password === password) {
             const { password: _p, ...payload } = bi;
             const token = (0, jwt_util_1.signJwt)({ email: payload.email, role: payload.role, resortName: payload.resortName }, process.env.JWT_SECRET || 'devsecret');

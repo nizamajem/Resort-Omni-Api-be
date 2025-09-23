@@ -28,8 +28,23 @@ let SettingsService = class SettingsService {
     async loadFeatureRow() {
         let row = await this.settings.findOne({ where: { key: 'feature_flags' } });
         if (!row) {
-            row = this.settings.create({ key: 'feature_flags', value: DEFAULT_FEATURES });
-            row = await this.settings.save(row);
+            const created = this.settings.create({ key: 'feature_flags', value: DEFAULT_FEATURES });
+            try {
+                row = await this.settings.save(created);
+            }
+            catch (err) {
+                const driverError = err && err.driverError ? err.driverError : err;
+                const duplicateCode = driverError && (driverError.code === '23505' || driverError.code === 'ER_DUP_ENTRY' || driverError.errno === 1062);
+                if (err instanceof typeorm_2.QueryFailedError && duplicateCode) {
+                    row = await this.settings.findOne({ where: { key: 'feature_flags' } });
+                }
+                else {
+                    throw err;
+                }
+            }
+            if (!row) {
+                row = await this.settings.findOne({ where: { key: 'feature_flags' } });
+            }
         }
         return row;
     }
@@ -76,3 +91,6 @@ exports.SettingsService = SettingsService = __decorate([
     __metadata("design:paramtypes", [typeorm_2.Repository])
 ], SettingsService);
 //# sourceMappingURL=settings.service.js.map
+
+
+
