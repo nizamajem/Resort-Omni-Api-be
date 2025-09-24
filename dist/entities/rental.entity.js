@@ -85,6 +85,14 @@ __decorate([
     __metadata("design:type", String)
 ], Rental.prototype, "paymentType", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 200, nullable: true }),
+    __metadata("design:type", String)
+], Rental.prototype, "credentialEmail", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 200, nullable: true }),
+    __metadata("design:type", String)
+], Rental.prototype, "credentialPassword", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Rental.prototype, "createdAt", void 0);

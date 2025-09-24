@@ -13,6 +13,8 @@ export declare class Rental {
     amountDue?: number;
     paymentOrderId?: string;
     paymentType?: string;
+    credentialEmail?: string;
+    credentialPassword?: string;
     createdAt: Date;
     updatedAt: Date;
 }

@@ -87,8 +87,13 @@ let OrdersController = class OrdersController {
                 baseMinutes,
                 startedAt: Date.now(),
                 status: 'active',
+                credentialEmail: chosen.email,
+                credentialPassword: chosen.password,
             });
             await this.rentals.save(rental);
+            if ('credentialPassword' in rental) {
+                delete rental.credentialPassword;
+            }
             return { credential: { email: chosen.email, password: chosen.password }, history: hist, rental };
         }
         catch (e) {

@@ -24,6 +24,26 @@ const class_validator_1 = require("class-validator");
 const EXTRA_RATE = 50000;
 const EXTRA_BLOCK_MINUTES = 60;
 const EXTRA_GRACE_MINUTES = 10;
+const sanitizeRentalResponse = (row) => {
+    if (!row) {
+        return row;
+    }
+    const plain = Object.assign({}, row);
+    const credentialEmail = typeof plain.credentialEmail === 'string' ? plain.credentialEmail.trim() : '';
+    const fallbackEmail = typeof plain.email === 'string' ? plain.email.trim() : '';
+    const resolvedEmail = credentialEmail || fallbackEmail || '';
+    plain.email = resolvedEmail;
+    if (resolvedEmail) {
+        plain.credentialEmail = resolvedEmail;
+    }
+    else if ('credentialEmail' in plain && !plain.credentialEmail) {
+        delete plain.credentialEmail;
+    }
+    if (Object.prototype.hasOwnProperty.call(plain, 'credentialPassword')) {
+        delete plain.credentialPassword;
+    }
+    return plain;
+};
 class StartRentalDto {
 }
 __decorate([
@@ -65,6 +85,18 @@ __decorate([
     (0, class_validator_1.MaxLength)(50),
     __metadata("design:type", String)
 ], StartRentalDto.prototype, "roomNumber", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(200),
+    __metadata("design:type", String)
+], StartRentalDto.prototype, "credentialEmail", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(200),
+    __metadata("design:type", String)
+], StartRentalDto.prototype, "credentialPassword", void 0);
 class EndRentalDto {
 }
 __decorate([
@@ -110,7 +142,7 @@ let RentalsController = class RentalsController {
         if (role === 'superadmin' && resortNameQ)
             where.resortName = resortNameQ;
         const rows = await this.rentals.find({ where });
-        return rows;
+        return rows.map((row) => sanitizeRentalResponse(row));
     }
     async start(body, req) {
         const { pkg, packageName, price, duration, guestName, roomNumber } = body || {};
@@ -129,8 +161,14 @@ let RentalsController = class RentalsController {
             startedAt: Date.now(),
             status: 'active',
         });
+        if (body?.credentialEmail) {
+            rental.credentialEmail = String(body.credentialEmail).trim();
+        }
+        if (body?.credentialPassword) {
+            rental.credentialPassword = String(body.credentialPassword);
+        }
         await this.rentals.save(rental);
-        return rental;
+        return sanitizeRentalResponse(rental);
     }
     async end(body, req) {
         const { rentalId } = body || {};
@@ -140,7 +178,7 @@ let RentalsController = class RentalsController {
         if (!row)
             return { error: 'Not found' };
         if (row.status !== 'active')
-            return row;
+            return sanitizeRentalResponse(row);
         const endAt = Date.now();
         const elapsedM = Math.max(0, Math.ceil((endAt - row.startedAt) / 60000));
         const extraMinutes = Math.max(0, elapsedM - row.baseMinutes);
@@ -151,7 +189,7 @@ let RentalsController = class RentalsController {
         row.status = 'unpaid';
         row.amountDue = due;
         await this.rentals.save(row);
-        return row;
+        return sanitizeRentalResponse(row);
     }
     async settle(body) {
         const { rentalId, orderId, paymentType } = body || {};
@@ -161,14 +199,14 @@ let RentalsController = class RentalsController {
         if (!row)
             return { error: 'Not found' };
         if (row.status !== 'unpaid')
-            return row;
+            return sanitizeRentalResponse(row);
         row.status = 'paid';
         if (orderId)
             row.paymentOrderId = orderId;
         if (paymentType)
             row.paymentType = paymentType;
         await this.rentals.save(row);
-        return row;
+        return sanitizeRentalResponse(row);
     }
     async remove(id, req) {
         if (!id)

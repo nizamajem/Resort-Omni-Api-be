@@ -8,6 +8,8 @@ declare class StartRentalDto {
     resortName?: string;
     guestName: string;
     roomNumber: string;
+    credentialEmail?: string;
+    credentialPassword?: string;
 }
 declare class EndRentalDto {
     rentalId: string;
