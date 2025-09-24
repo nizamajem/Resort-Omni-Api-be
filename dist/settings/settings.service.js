@@ -20,6 +20,7 @@ const setting_entity_1 = require("../entities/setting.entity");
 const DEFAULT_FEATURES = {
     packages: { '1h': true, '3h': true, '1d': true },
     payments: { cash: true, midtransSandbox: true, midtransProduction: true },
+    packagePrices: { '1h': 65000, '3h': 125000, '1d': 200000 },
 };
 let SettingsService = class SettingsService {
     constructor(settings) {
@@ -54,6 +55,7 @@ let SettingsService = class SettingsService {
         return {
             packages: { ...DEFAULT_FEATURES.packages, ...(value.packages || {}) },
             payments: { ...DEFAULT_FEATURES.payments, ...(value.payments || {}) },
+            packagePrices: { ...DEFAULT_FEATURES.packagePrices, ...(value.packagePrices || {}) },
         };
     }
     async updateFeatures(input) {
@@ -75,9 +77,21 @@ let SettingsService = class SettingsService {
                 }
             }
         }
+        const sanitizedPackagePrices = {};
+        if (input.packagePrices && typeof input.packagePrices === 'object') {
+            for (const key of Object.keys(DEFAULT_FEATURES.packagePrices)) {
+                if (Object.prototype.hasOwnProperty.call(input.packagePrices, key)) {
+                    const raw = Number(input.packagePrices[key]);
+                    if (Number.isFinite(raw) && raw > 0) {
+                        sanitizedPackagePrices[key] = Math.round(raw);
+                    }
+                }
+            }
+        }
         const next = {
             packages: { ...current.packages, ...sanitizedPackages },
             payments: { ...current.payments, ...sanitizedPayments },
+            packagePrices: { ...current.packagePrices, ...sanitizedPackagePrices },
         };
         row.value = next;
         await this.settings.save(row);
