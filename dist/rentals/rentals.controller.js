@@ -170,6 +170,18 @@ let RentalsController = class RentalsController {
         await this.rentals.save(row);
         return row;
     }
+    async remove(id, req) {
+        if (!id)
+            return { error: 'Missing id' };
+        const role = req?.user?.role;
+        if (role !== 'superadmin')
+            throw new common_1.ForbiddenException('Only super admin can delete rentals');
+        const existing = await this.rentals.findOne({ where: { id } });
+        if (!existing)
+            return { error: 'Not found' };
+        await this.rentals.delete({ id });
+        return { ok: true };
+    }
 };
 exports.RentalsController = RentalsController;
 __decorate([
@@ -204,6 +216,14 @@ __decorate([
     __metadata("design:paramtypes", [SettleRentalDto]),
     __metadata("design:returntype", Promise)
 ], RentalsController.prototype, "settle", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], RentalsController.prototype, "remove", null);
 exports.RentalsController = RentalsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('resort', 'superadmin'),

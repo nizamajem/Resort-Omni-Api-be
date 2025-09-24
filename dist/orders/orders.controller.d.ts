@@ -41,4 +41,5 @@ export declare class OrdersController {
         rental?: undefined;
     }>;
     history(query: HistoryQueryDto, req: any): Promise<HistoryItem[]>;
+    removeHistory(id: string, req: any): Promise<{ ok: boolean } | { error: string }>;
 }

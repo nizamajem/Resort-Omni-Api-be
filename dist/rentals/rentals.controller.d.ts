@@ -30,5 +30,6 @@ export declare class RentalsController {
     settle(body: SettleRentalDto): Promise<Rental | {
         error: string;
     }>;
+    remove(id: string, req: any): Promise<{ ok: boolean } | { error: string }>;
 }
 export {};
