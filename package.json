@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "start": "node dist/main.js",
-    "start:dev": "node dist/main.js"
+    "start:dev": "node dist/main.js",
+    "start:prod": "node dist/main.js",
+    "migrate:run": "npx typeorm migration:run -d dist/data-source.js",
+    "migrate:revert": "npx typeorm migration:revert -d dist/data-source.js",
+    "schema:sync": "npx typeorm schema:sync -d dist/data-source.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
