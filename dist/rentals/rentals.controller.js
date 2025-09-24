@@ -21,9 +21,8 @@ const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const roles_guard_1 = require("../auth/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 const class_validator_1 = require("class-validator");
-const EXTRA_RATE = 50000;
-const EXTRA_BLOCK_MINUTES = 60;
-const EXTRA_GRACE_MINUTES = 10;
+const settings_service_1 = require("../settings/settings.service");
+const DEFAULT_EXTRAS = { rate: 65000, block: 60, grace: 10 };
 const sanitizeRentalResponse = (row) => {
     if (!row) {
         return row;
@@ -122,8 +121,26 @@ __decorate([
     __metadata("design:type", String)
 ], SettleRentalDto.prototype, "paymentType", void 0);
 let RentalsController = class RentalsController {
-    constructor(rentals) {
+    constructor(rentals, settings) {
         this.rentals = rentals;
+        this.settings = settings;
+    }
+    async resolveExtras() {
+        try {
+            if (!this.settings || typeof this.settings.getFeatures !== 'function') {
+                return DEFAULT_EXTRAS;
+            }
+            const features = await this.settings.getFeatures();
+            const extras = (features?.rentalExtras) || {};
+            const graceRaw = Number(extras.extraGraceMinutes);
+            const rateRaw = Number(extras.extraHourlyRate);
+            const grace = Number.isFinite(graceRaw) && graceRaw >= 0 ? Math.round(graceRaw) : DEFAULT_EXTRAS.grace;
+            const rate = Number.isFinite(rateRaw) && rateRaw > 0 ? Math.round(rateRaw) : DEFAULT_EXTRAS.rate;
+            return { grace, rate, block: DEFAULT_EXTRAS.block };
+        }
+        catch (_error) {
+            return DEFAULT_EXTRAS;
+        }
     }
     async list(req, status, resortNameQ) {
         const role = req?.user?.role;
@@ -182,9 +199,10 @@ let RentalsController = class RentalsController {
         const endAt = Date.now();
         const elapsedM = Math.max(0, Math.ceil((endAt - row.startedAt) / 60000));
         const extraMinutes = Math.max(0, elapsedM - row.baseMinutes);
-        const chargeableMinutes = Math.max(0, extraMinutes - EXTRA_GRACE_MINUTES);
-        const extraBlocks = Math.max(0, Math.ceil(chargeableMinutes / EXTRA_BLOCK_MINUTES));
-        const due = row.basePrice + extraBlocks * EXTRA_RATE;
+        const extras = await this.resolveExtras();
+        const chargeableMinutes = Math.max(0, extraMinutes - extras.grace);
+        const extraBlocks = Math.max(0, Math.ceil(chargeableMinutes / extras.block));
+        const due = row.basePrice + extraBlocks * extras.rate;
         row.endedAt = endAt;
         row.status = 'unpaid';
         row.amountDue = due;
@@ -267,6 +285,7 @@ exports.RentalsController = RentalsController = __decorate([
     (0, roles_decorator_1.Roles)('resort', 'superadmin'),
     (0, common_1.Controller)('rentals'),
     __param(0, (0, typeorm_1.InjectRepository)(rental_entity_1.Rental)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, common_1.Inject)(settings_service_1.SettingsService)),
+    __metadata("design:paramtypes", [typeorm_2.Repository, settings_service_1.SettingsService])
 ], RentalsController);
 //# sourceMappingURL=rentals.controller.js.map

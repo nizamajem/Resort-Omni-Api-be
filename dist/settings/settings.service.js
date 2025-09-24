@@ -21,6 +21,7 @@ const DEFAULT_FEATURES = {
     packages: { '1h': true, '3h': true, '1d': true },
     payments: { cash: true, midtransSandbox: true, midtransProduction: true },
     packagePrices: { '1h': 65000, '3h': 125000, '1d': 200000 },
+    rentalExtras: { extraGraceMinutes: 10, extraHourlyRate: 65000 },
 };
 let SettingsService = class SettingsService {
     constructor(settings) {
@@ -56,6 +57,7 @@ let SettingsService = class SettingsService {
             packages: { ...DEFAULT_FEATURES.packages, ...(value.packages || {}) },
             payments: { ...DEFAULT_FEATURES.payments, ...(value.payments || {}) },
             packagePrices: { ...DEFAULT_FEATURES.packagePrices, ...(value.packagePrices || {}) },
+            rentalExtras: { ...DEFAULT_FEATURES.rentalExtras, ...(value.rentalExtras || {}) },
         };
     }
     async updateFeatures(input) {
@@ -88,10 +90,27 @@ let SettingsService = class SettingsService {
                 }
             }
         }
+        const sanitizedRentalExtras = {};
+        if (input.rentalExtras && typeof input.rentalExtras === 'object') {
+            for (const key of Object.keys(DEFAULT_FEATURES.rentalExtras)) {
+                if (Object.prototype.hasOwnProperty.call(input.rentalExtras, key)) {
+                    const raw = Number(input.rentalExtras[key]);
+                    if (key === 'extraGraceMinutes') {
+                        if (Number.isFinite(raw) && raw >= 0) {
+                            sanitizedRentalExtras[key] = Math.round(raw);
+                        }
+                    }
+                    else if (Number.isFinite(raw) && raw > 0) {
+                        sanitizedRentalExtras[key] = Math.round(raw);
+                    }
+                }
+            }
+        }
         const next = {
             packages: { ...current.packages, ...sanitizedPackages },
             payments: { ...current.payments, ...sanitizedPayments },
             packagePrices: { ...current.packagePrices, ...sanitizedPackagePrices },
+            rentalExtras: { ...current.rentalExtras, ...sanitizedRentalExtras },
         };
         row.value = next;
         await this.settings.save(row);
