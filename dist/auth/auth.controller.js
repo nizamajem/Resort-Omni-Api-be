@@ -50,6 +50,35 @@ let AuthController = class AuthController {
     async me(req) {
         return { user: req.user };
     }
+    async updateProfile(body, req) {
+        const role = req?.user?.role;
+        if (role !== 'resort')
+            throw new common_1.ForbiddenException('Only resort accounts can update profile');
+        const currentEmail = req?.user?.email;
+        if (!currentEmail)
+            return { error: 'Missing user context' };
+        const row = await this.resorts.findOne({ where: { email: String(currentEmail).toLowerCase() } });
+        if (!row)
+            return { error: 'Account not found' };
+        const nextResortName = typeof (body?.resortName) === 'string' ? body.resortName.trim() : undefined;
+        const nextEmail = typeof (body?.email) === 'string' ? body.email.trim().toLowerCase() : undefined;
+        const nextPassword = typeof (body?.password) === 'string' ? body.password : undefined;
+        if (nextEmail && nextEmail !== row.email) {
+            const exist = await this.resorts.findOne({ where: { email: nextEmail } });
+            if (exist && exist.id !== row.id) {
+                return { error: 'Email already exists' };
+            }
+            row.email = nextEmail;
+        }
+        if (nextResortName)
+            row.resortName = nextResortName;
+        if (nextPassword)
+            row.password = nextPassword;
+        await this.resorts.save(row);
+        const payload = { email: row.email, role: 'resort', resortName: row.resortName };
+        const token = (0, jwt_util_1.signJwt)(payload, process.env.JWT_SECRET || 'devsecret');
+        return { ok: true, accessToken: token, user: payload };
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -67,6 +96,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "me", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Put)('profile'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "updateProfile", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __param(0, (0, typeorm_1.InjectRepository)(resort_account_entity_1.ResortAccount)),

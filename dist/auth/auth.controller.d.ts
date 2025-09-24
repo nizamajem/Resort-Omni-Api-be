@@ -15,4 +15,5 @@ export declare class AuthController {
     me(req: any): Promise<{
         user: any;
     }>;
+    updateProfile(body: any, req: any): Promise<{ ok: boolean; accessToken: string; user: any; } | { error: string }>;
 }
