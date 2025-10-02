@@ -21,7 +21,7 @@ const DEFAULT_FEATURES = {
     packages: { '1h': true, '3h': true, '1d': true },
     payments: { cash: true, midtransSandbox: true, midtransProduction: true },
     packagePrices: { '1h': 65000, '3h': 125000, '1d': 200000 },
-    rentalExtras: { extraGraceMinutes: 10, extraHourlyRate: 65000 },
+    rentalExtras: { extraGraceMinutes: 10, extraHourlyRate: 65000, extraBlockMinutes: 60 },
 };
 let SettingsService = class SettingsService {
     constructor(settings) {

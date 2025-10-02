@@ -134,9 +134,11 @@ let RentalsController = class RentalsController {
             const extras = (features?.rentalExtras) || {};
             const graceRaw = Number(extras.extraGraceMinutes);
             const rateRaw = Number(extras.extraHourlyRate);
+            const blockRaw = Number(extras.extraBlockMinutes);
             const grace = Number.isFinite(graceRaw) && graceRaw >= 0 ? Math.round(graceRaw) : DEFAULT_EXTRAS.grace;
             const rate = Number.isFinite(rateRaw) && rateRaw > 0 ? Math.round(rateRaw) : DEFAULT_EXTRAS.rate;
-            return { grace, rate, block: DEFAULT_EXTRAS.block };
+            const block = Number.isFinite(blockRaw) && blockRaw > 0 ? Math.max(1, Math.round(blockRaw)) : DEFAULT_EXTRAS.block;
+            return { grace, rate, block };
         }
         catch (_error) {
             return DEFAULT_EXTRAS;
