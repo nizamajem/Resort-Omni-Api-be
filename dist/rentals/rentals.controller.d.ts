@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { Rental } from '../entities/rental.entity';
 declare class StartRentalDto {
-    pkg: '1h' | '3h' | '1d';
+    pkg: '1h' | '3h' | '12h' | '1d';
     packageName: string;
     price: number;
     duration?: string;

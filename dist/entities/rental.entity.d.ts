@@ -3,7 +3,7 @@ export declare class Rental {
     resortName: string;
     guestName: string;
     roomNumber: string;
-    pkg: '1h' | '3h' | '1d';
+    pkg: '1h' | '3h' | '12h' | '1d';
     packageName: string;
     basePrice: number;
     baseMinutes: number;

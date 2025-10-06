@@ -47,7 +47,7 @@ class StartRentalDto {
 }
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(['1h', '3h', '1d']),
+    (0, class_validator_1.IsIn)(['1h', '3h', '12h', '1d']),
     __metadata("design:type", String)
 ], StartRentalDto.prototype, "pkg", void 0);
 __decorate([
@@ -168,7 +168,7 @@ let RentalsController = class RentalsController {
         const resortName = req?.user?.resortName || body?.resortName || 'Unknown Resort';
         if (!pkg || !packageName || !price || !guestName || !roomNumber)
             return { error: 'Missing fields' };
-        const baseMinutes = pkg === '1h' ? 60 : pkg === '3h' ? 180 : 1440;
+        const baseMinutes = pkg === '1h' ? 60 : pkg === '3h' ? 180 : pkg === '12h' ? 720 : 1440;
         const rental = this.rentals.create({
             resortName,
             guestName,

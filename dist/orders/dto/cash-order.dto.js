@@ -17,7 +17,7 @@ exports.CashOrderDto = CashOrderDto;
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsIn)(['1h', '3h', '1d']),
+    (0, class_validator_1.IsIn)(['1h', '3h', '12h', '1d']),
     __metadata("design:type", String)
 ], CashOrderDto.prototype, "pkg", void 0);
 __decorate([

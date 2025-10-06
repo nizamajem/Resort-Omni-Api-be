@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { Setting } from '../entities/setting.entity';
-type PackageKey = '1h' | '3h' | '1d';
+type PackageKey = '1h' | '3h' | '12h' | '1d';
 type PaymentKey = 'cash' | 'midtransSandbox' | 'midtransProduction';
 export type FeatureConfig = {
     packages: Record<PackageKey, boolean>;

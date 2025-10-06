@@ -31,7 +31,7 @@ let PaymentsController = class PaymentsController {
         this.histories = histories;
         this.rentals = rentals;
         this.settings = settings;
-        this.pkgKeys = ['1h', '3h', '1d'];
+        this.pkgKeys = ['1h', '3h', '12h', '1d'];
     }
     resolveMode(mode) {
         if (mode === 'production')
@@ -152,7 +152,7 @@ let PaymentsController = class PaymentsController {
         });
         await this.histories.save(hist);
         try {
-            const baseMinutes = pkgId === '1h' ? 60 : pkgId === '3h' ? 180 : 1440;
+            const baseMinutes = pkgId === '1h' ? 60 : pkgId === '3h' ? 180 : pkgId === '12h' ? 720 : 1440;
             const rental = this.rentals.create({
                 resortName,
                 guestName: body?.guestName || 'Guest',

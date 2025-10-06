@@ -9,7 +9,7 @@ export type ResortAccount = {
 };
 export type PackageAccount = {
     id: string;
-    pkg: '1h' | '3h' | '1d' | string;
+    pkg: '1h' | '3h' | '12h' | '1d' | string;
     email: string;
     password: string;
     status: 'active' | 'sold';

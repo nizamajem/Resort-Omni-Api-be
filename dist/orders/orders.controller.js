@@ -31,11 +31,11 @@ let OrdersController = class OrdersController {
         this.histories = histories;
         this.rentals = rentals;
         this.settings = settings;
-        this.pkgKeys = ['1h', '3h', '1d'];
+        this.pkgKeys = ['1h', '3h', '12h', '1d'];
     }
     async availability() {
         const features = await this.settings.getFeatures();
-        const counts = { '1h': 0, '3h': 0, '1d': 0 };
+        const counts = { '1h': 0, '3h': 0, '12h': 0, '1d': 0 };
         await Promise.all(this.pkgKeys.map(async (pkg) => {
             if (features.packages[pkg]) {
                 counts[pkg] = await this.packages.count({ where: { pkg, status: 'active' } });
@@ -76,7 +76,7 @@ let OrdersController = class OrdersController {
         });
         await this.histories.save(hist);
         try {
-            const baseMinutes = pkgId === '1h' ? 60 : pkgId === '3h' ? 180 : 1440;
+            const baseMinutes = pkgId === '1h' ? 60 : pkgId === '3h' ? 180 : pkgId === '12h' ? 720 : 1440;
             const rental = this.rentals.create({
                 resortName: resortName || 'Unknown Resort',
                 guestName: guestName || 'Guest',
