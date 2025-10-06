@@ -1,36 +1,17 @@
-import { Repository } from 'typeorm';
-import { HistoryItem } from '../entities/history-item.entity';
-import { AnalyticsQueryDto } from './dto/analytics-query.dto';
+import { Repository } from "typeorm";
+import { HistoryItem } from "../entities/history-item.entity";
+import { Rental } from "../entities/rental.entity";
+import { AnalyticsQueryDto } from "./dto/analytics-query.dto";
+import { BusinessVisualizationQueryDto } from "./dto/business-visualization-query.dto";
+import { SettingsService } from "../settings/settings.service";
 export declare class AnalyticsController {
-    private histories;
-    constructor(histories: Repository<HistoryItem>);
-    summary(q: AnalyticsQueryDto): Promise<{
-        range: {
-            start: string;
-            end: string;
-            groupBy: "month" | "week" | "day";
-        };
-        resorts: {
-            resortName: string;
-            orders: number;
-            revenue: number;
-        }[];
-        series: {
-            resortName: string;
-            period: string;
-            orders: number;
-            revenue: number;
-        }[];
-        byPayment: {
-            resortName: string;
-            cash: {
-                orders: number;
-                revenue: number;
-            };
-            online: {
-                orders: number;
-                revenue: number;
-            };
-        }[];
-    }>;
+    private readonly histories;
+    private readonly rentals;
+    private readonly settingsService;
+    constructor(histories: Repository<HistoryItem>, rentals: Repository<Rental>, settingsService: SettingsService);
+    summary(q: AnalyticsQueryDto): Promise<any>;
+    private buildBusinessVisualization;
+    businessVisualization(query: BusinessVisualizationQueryDto): Promise<any>;
+    regenerateInsights(body: BusinessVisualizationQueryDto): Promise<{ insights: any; }>;
+    private generateInsights;
 }

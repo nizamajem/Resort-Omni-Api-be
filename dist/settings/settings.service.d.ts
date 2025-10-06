@@ -5,6 +5,12 @@ type PaymentKey = 'cash' | 'midtransSandbox' | 'midtransProduction';
 export type FeatureConfig = {
     packages: Record<PackageKey, boolean>;
     payments: Record<PaymentKey, boolean>;
+    packagePrices: Record<PackageKey, number>;
+    rentalExtras: {
+        extraGraceMinutes: number;
+        extraHourlyRate: number;
+        extraBlockMinutes: number;
+    };
 };
 export declare class SettingsService {
     private readonly settings;
@@ -12,5 +18,6 @@ export declare class SettingsService {
     private loadFeatureRow;
     getFeatures(): Promise<FeatureConfig>;
     updateFeatures(input: Partial<FeatureConfig>): Promise<FeatureConfig>;
+    getJson<T = any>(key: string, fallback?: T | null): Promise<T | null>;
+    setJson<T = any>(key: string, value: T): Promise<T>;
 }
-export {};

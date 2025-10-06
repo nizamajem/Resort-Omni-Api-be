@@ -58,7 +58,7 @@ let SettingsService = class SettingsService {
             payments: { ...DEFAULT_FEATURES.payments, ...(value.payments || {}) },
             packagePrices: { ...DEFAULT_FEATURES.packagePrices, ...(value.packagePrices || {}) },
             rentalExtras: { ...DEFAULT_FEATURES.rentalExtras, ...(value.rentalExtras || {}) },
-        };
+};
     }
     async updateFeatures(input) {
         const row = await this.loadFeatureRow();
@@ -116,6 +116,24 @@ let SettingsService = class SettingsService {
         await this.settings.save(row);
         return next;
     }
+    async getJson(key, fallback = null) {
+        const existing = await this.settings.findOne({ where: { key } });
+        if (!existing) {
+            return fallback !== undefined ? fallback : null;
+        }
+        return existing.value !== undefined && existing.value !== null ? existing.value : (fallback !== undefined ? fallback : null);
+    }
+    async setJson(key, value) {
+        let row = await this.settings.findOne({ where: { key } });
+        if (!row) {
+            row = this.settings.create({ key, value });
+        }
+        else {
+            row.value = value;
+        }
+        await this.settings.save(row);
+        return row.value;
+    }
 };
 exports.SettingsService = SettingsService;
 exports.SettingsService = SettingsService = __decorate([
@@ -124,6 +142,17 @@ exports.SettingsService = SettingsService = __decorate([
     __metadata("design:paramtypes", [typeorm_2.Repository])
 ], SettingsService);
 //# sourceMappingURL=settings.service.js.map
+
+
+
+
+
+
+
+
+
+
+
 
 
 

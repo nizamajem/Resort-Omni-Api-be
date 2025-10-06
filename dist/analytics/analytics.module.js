@@ -10,13 +10,15 @@ exports.AnalyticsModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const history_item_entity_1 = require("../entities/history-item.entity");
+const rental_entity_1 = require("../entities/rental.entity");
 const analytics_controller_1 = require("./analytics.controller");
+const settings_module_1 = require("../settings/settings.module");
 let AnalyticsModule = class AnalyticsModule {
 };
 exports.AnalyticsModule = AnalyticsModule;
 exports.AnalyticsModule = AnalyticsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([history_item_entity_1.HistoryItem])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([history_item_entity_1.HistoryItem, rental_entity_1.Rental]), settings_module_1.SettingsModule],
         controllers: [analytics_controller_1.AnalyticsController],
     })
 ], AnalyticsModule);
