@@ -4,9 +4,16 @@ export interface GeminiOptions {
   fetch?: typeof fetch;
 }
 
-export function generateGeminiResponse(
-  apiKey: string,
-  model: string,
-  prompt: string,
-  options?: GeminiOptions
-): Promise<Response>;
+export interface GeminiModule {
+  generateGeminiResponse(
+    apiKey: string,
+    model: string,
+    prompt: string,
+    options?: GeminiOptions
+  ): Promise<Response>;
+}
+
+export const generateGeminiResponse: GeminiModule['generateGeminiResponse'];
+
+declare const _default: GeminiModule;
+export default _default;

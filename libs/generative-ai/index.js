@@ -68,6 +68,7 @@ async function generateGeminiResponse(apiKey, model, prompt, options = {}) {
   }
 }
 
-module.exports = {
-  generateGeminiResponse,
-};
+const api = { generateGeminiResponse };
+api.default = api;
+
+module.exports = api;
