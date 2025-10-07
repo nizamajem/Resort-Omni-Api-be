@@ -1,37 +1,38 @@
 {
-    "name":  "resort-be",
-    "version":  "0.1.0",
-    "private":  true,
-    "scripts":  {
-                    "start":  "node dist/main.js",
-                    "start:dev":  "nest start --watch",
-                    "build":  "nest build",
-                    "db:up":  "docker compose up -d db",
-                    "db:down":  "docker compose down",
-                    "db:logs":  "docker compose logs -f db",
-                    "migration:generate":  "typeorm-ts-node-commonjs migration:generate -d src/data-source.ts src/migrations/Init",
-                    "migration:run":  "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
-                    "migration:revert":  "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
-                    "start:prod":  "node dist/main.js"
-                },
-    "dependencies":  {
-                         "@nestjs/common":  "^11.1.6",
-                         "@nestjs/core":  "^11.1.6",
-                         "@nestjs/platform-express":  "^11.1.6",
-                         "@nestjs/typeorm":  "^11.0.0",
-                         "class-transformer":  "^0.5.1",
-                         "class-validator":  "^0.14.0",
-                         "pg":  "^8.12.0",
-                         "reflect-metadata":  "^0.2.1",
-                         "rxjs":  "^7.8.1",
-                         "dotenv":  "^16.4.5",
-                         "typeorm":  "^0.3.20"
-                     },
-    "devDependencies":  {
-                            "@nestjs/cli":  "^11.0.0",
-                            "@nestjs/schematics":  "^11.0.0",
-                            "@nestjs/testing":  "^11.1.6",
-                            "typescript":  "^5.5.4",
-                            "ts-node":  "^10.9.2"
-                        }
+    "name": "resort-be",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "start": "node dist/main.js",
+        "start:dev": "nest start --watch",
+        "build": "nest build",
+        "db:up": "docker compose up -d db",
+        "db:down": "docker compose down",
+        "db:logs": "docker compose logs -f db",
+        "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/data-source.ts src/migrations/Init",
+        "migration:run": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
+        "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
+        "start:prod": "node dist/main.js"
+    },
+    "dependencies": {
+        "@google/generative-ai": "file:libs/generative-ai",
+        "@nestjs/common": "^11.1.6",
+        "@nestjs/core": "^11.1.6",
+        "@nestjs/platform-express": "^11.1.6",
+        "@nestjs/typeorm": "^11.0.0",
+        "class-transformer": "^0.5.1",
+        "class-validator": "^0.14.0",
+        "dotenv": "^16.4.5",
+        "pg": "^8.12.0",
+        "reflect-metadata": "^0.2.1",
+        "rxjs": "^7.8.1",
+        "typeorm": "^0.3.20"
+    },
+    "devDependencies": {
+        "@nestjs/cli": "^11.0.10",
+        "@nestjs/schematics": "^11.0.0",
+        "@nestjs/testing": "^11.1.6",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.5.4"
+    }
 }

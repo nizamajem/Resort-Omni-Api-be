@@ -328,7 +328,7 @@ let AnalyticsController = class AnalyticsController {
     }
     async businessVisualization(query) {
         const base = await this.buildBusinessVisualization(query);
-        const stored = await this.base settingsService.getJson(GEMINI_SETTINGS_KEY, null);
+        const stored = await this.settingsService.getJson(GEMINI_SETTINGS_KEY, null);
         return {
             ...base,
             insights: stored,
