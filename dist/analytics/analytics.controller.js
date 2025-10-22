@@ -78,6 +78,15 @@ function fillTrend(start, end, dailyMap) {
     }
     return trend;
 }
+function createResortEntry(resortName) {
+    return {
+        resortName,
+        rides: 0,
+        minutes: 0,
+        revenue: 0,
+        packageCounts: { '1h': 0, '3h': 0, '12h': 0, '1d': 0 },
+    };
+}
 function buildPromptPayload(data) {
     return {
         range: data.range,
@@ -224,9 +233,19 @@ let AnalyticsController = class AnalyticsController {
             dayEntry.rides += 1;
             dayEntry.revenue += price;
             dailyMap.set(dateKey, dayEntry);
-            const resortEntry = resortMap.get(resortName) || { resortName, rides: 0, minutes: 0, revenue: 0 };
+            const resortEntry = resortMap.get(resortName) || createResortEntry(resortName);
             resortEntry.rides += 1;
             resortEntry.revenue += price;
+            if (resortEntry.packageCounts && Object.prototype.hasOwnProperty.call(resortEntry.packageCounts, pkg)) {
+                resortEntry.packageCounts[pkg] += 1;
+            }
+            else if (resortEntry.packageCounts) {
+                resortEntry.packageCounts[pkg] = 1;
+            }
+            else {
+                resortEntry.packageCounts = { '1h': 0, '3h': 0, '12h': 0, '1d': 0 };
+                resortEntry.packageCounts[pkg] = 1;
+            }
             resortMap.set(resortName, resortEntry);
             packageCounts[pkg] = (packageCounts[pkg] || 0) + 1;
             totalRevenue += price;
@@ -260,7 +279,7 @@ let AnalyticsController = class AnalyticsController {
             dayEntry.minutes += durationMinutes;
             dayEntry.revenue += extraRevenue;
             dailyMap.set(dateKey, dayEntry);
-            const resortEntry = resortMap.get(resortName) || { resortName, rides: 0, minutes: 0, revenue: 0 };
+            const resortEntry = resortMap.get(resortName) || createResortEntry(resortName);
             resortEntry.minutes += durationMinutes;
             resortEntry.revenue += extraRevenue;
             resortMap.set(resortName, resortEntry);
@@ -289,7 +308,7 @@ let AnalyticsController = class AnalyticsController {
                 const dayEntry = dailyMap.get(dateKey) || { date: dateKey, rides: 0, minutes: 0, revenue: 0 };
                 dayEntry.minutes += fallbackMinutes;
                 dailyMap.set(dateKey, dayEntry);
-                const resortEntry = resortMap.get(resortName) || { resortName, rides: 0, minutes: 0, revenue: 0 };
+                const resortEntry = resortMap.get(resortName) || createResortEntry(resortName);
                 resortEntry.minutes += fallbackMinutes;
                 resortMap.set(resortName, resortEntry);
                 totalMinutes += fallbackMinutes;
