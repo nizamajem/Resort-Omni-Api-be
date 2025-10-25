@@ -37,17 +37,19 @@ let ResortsController = class ResortsController {
         return { total: rows.length, data: rows.slice(off, off + lim) };
     }
     async create(body) {
-        const { resortName, email, password } = body || {};
+        const { resortName, email, password, role: rawRole } = body || {};
         if (!resortName || !email || !password)
             return { error: 'Missing fields' };
         const exist = await this.repo.findOne({ where: { email: String(email).toLowerCase() } });
         if (exist) {
             return { error: 'Email already exists' };
         }
+        const role = rawRole === 'partnership' ? 'partnership' : 'resort';
         const row = this.repo.create({
             resortName: String(resortName),
             email: String(email).toLowerCase(),
             password: String(password),
+            role,
             status: 'active',
         });
         return await this.repo.save(row);
@@ -59,6 +61,13 @@ let ResortsController = class ResortsController {
         const row = await this.repo.findOne({ where: { id } });
         if (!row)
             return { error: 'Not found' };
+        if (patch?.role !== undefined) {
+            if (patch.role !== 'resort' && patch.role !== 'partnership') {
+                return { error: 'Invalid role' };
+            }
+            row.role = patch.role;
+            delete patch.role;
+        }
         Object.assign(row, patch);
         return await this.repo.save(row);
     }

@@ -125,6 +125,22 @@ let RentalsController = class RentalsController {
         this.rentals = rentals;
         this.settings = settings;
     }
+    canAccessPackage(features, pkg, role) {
+        if (!features?.packages || features.packages[pkg] === false) {
+            return false;
+        }
+        if (role === 'superadmin') {
+            return true;
+        }
+        const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
+        if (!allowed || allowed.length === 0) {
+            return true;
+        }
+        if (!role) {
+            return false;
+        }
+        return allowed.includes(role);
+    }
     async resolveExtras() {
         try {
             if (!this.settings || typeof this.settings.getFeatures !== 'function') {
@@ -156,7 +172,7 @@ let RentalsController = class RentalsController {
                 statuses = s;
         }
         const where = { status: (0, typeorm_2.In)(statuses) };
-        if (role === 'resort' && resortName)
+        if ((role === 'resort' || role === 'partnership') && resortName)
             where.resortName = resortName;
         if (role === 'superadmin' && resortNameQ)
             where.resortName = resortNameQ;
@@ -168,12 +184,19 @@ let RentalsController = class RentalsController {
         const resortName = req?.user?.resortName || body?.resortName || 'Unknown Resort';
         if (!pkg || !packageName || !price || !guestName || !roomNumber)
             return { error: 'Missing fields' };
-        const baseMinutes = pkg === '1h' ? 60 : pkg === '3h' ? 180 : pkg === '12h' ? 720 : 1440;
+        const pkgId = String(pkg);
+        const features = await this.settings.getFeatures();
+        if (!features.packages[pkgId])
+            return { error: 'Package disabled' };
+        const role = req?.user?.role || null;
+        if (!this.canAccessPackage(features, pkgId, role))
+            return { error: 'Package not available for your role' };
+        const baseMinutes = pkgId === '1h' ? 60 : pkgId === '3h' ? 180 : pkgId === '12h' ? 720 : 1440;
         const rental = this.rentals.create({
             resortName,
             guestName,
             roomNumber,
-            pkg,
+            pkg: pkgId,
             packageName,
             basePrice: Number(price),
             baseMinutes,
@@ -284,7 +307,7 @@ __decorate([
 ], RentalsController.prototype, "remove", null);
 exports.RentalsController = RentalsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('resort', 'superadmin'),
+    (0, roles_decorator_1.Roles)('resort', 'partnership', 'superadmin'),
     (0, common_1.Controller)('rentals'),
     __param(0, (0, typeorm_1.InjectRepository)(rental_entity_1.Rental)),
     __param(1, (0, common_1.Inject)(settings_service_1.SettingsService)),

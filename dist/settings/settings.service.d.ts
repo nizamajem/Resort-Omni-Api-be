@@ -2,8 +2,10 @@ import { Repository } from 'typeorm';
 import { Setting } from '../entities/setting.entity';
 type PackageKey = '1h' | '3h' | '12h' | '1d';
 type PaymentKey = 'cash' | 'midtransSandbox' | 'midtransProduction';
+type PackageRole = 'resort' | 'partnership';
 export type FeatureConfig = {
     packages: Record<PackageKey, boolean>;
+    packageRoles: Record<PackageKey, PackageRole[]>;
     payments: Record<PaymentKey, boolean>;
     packagePrices: Record<PackageKey, number>;
     rentalExtras: {

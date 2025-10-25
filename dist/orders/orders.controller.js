@@ -33,20 +33,40 @@ let OrdersController = class OrdersController {
         this.settings = settings;
         this.pkgKeys = ['1h', '3h', '12h', '1d'];
     }
-    async availability() {
+    canAccessPackage(features, pkg, role) {
+        if (!features?.packages || features.packages[pkg] === false) {
+            return false;
+        }
+        if (role === 'superadmin') {
+            return true;
+        }
+        const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
+        if (!allowed || allowed.length === 0) {
+            return true;
+        }
+        if (!role) {
+            return false;
+        }
+        return allowed.includes(role);
+    }
+    async availability(req) {
         const features = await this.settings.getFeatures();
         const counts = { '1h': 0, '3h': 0, '12h': 0, '1d': 0 };
+        const enabled = { '1h': false, '3h': false, '12h': false, '1d': false };
+        const role = req?.user?.role || null;
         await Promise.all(this.pkgKeys.map(async (pkg) => {
-            if (features.packages[pkg]) {
+            const allow = this.canAccessPackage(features, pkg, role);
+            enabled[pkg] = allow;
+            if (allow) {
                 counts[pkg] = await this.packages.count({ where: { pkg, status: 'active' } });
             }
             else {
                 counts[pkg] = 0;
             }
         }));
-        return { ...counts, enabled: features.packages };
+        return { ...counts, enabled };
     }
-    async cash(body) {
+    async cash(body, req) {
         const { pkg, packageName, price, duration, resortName, guestName, roomNumber } = body || {};
         if (!pkg || !packageName || !price)
             return { error: 'Missing fields' };
@@ -56,6 +76,9 @@ let OrdersController = class OrdersController {
         const features = await this.settings.getFeatures();
         if (!features.packages[pkgId])
             return { error: 'Package disabled' };
+        const role = req?.user?.role || null;
+        if (!this.canAccessPackage(features, pkgId, role))
+            return { error: 'Package not available for your role' };
         if (!features.payments.cash)
             return { error: 'Cash payment disabled' };
         const candidates = await this.packages.find({ where: { pkg: pkgId, status: 'active' } });
@@ -108,7 +131,7 @@ let OrdersController = class OrdersController {
             where.status = query.status;
         const role = req?.user?.role;
         const resortName = req?.user?.resortName;
-        if (role === 'resort' && resortName) {
+        if ((role === 'resort' || role === 'partnership') && resortName) {
             where.resortName = resortName;
         }
         if (role === 'superadmin' && query?.resortName) {
@@ -133,15 +156,17 @@ let OrdersController = class OrdersController {
 exports.OrdersController = OrdersController;
 __decorate([
     (0, common_1.Get)('availability'),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], OrdersController.prototype, "availability", null);
 __decorate([
     (0, common_1.Post)('cash'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [cash_order_dto_1.CashOrderDto]),
+    __metadata("design:paramtypes", [cash_order_dto_1.CashOrderDto, Object]),
     __metadata("design:returntype", Promise)
 ], OrdersController.prototype, "cash", null);
 __decorate([
@@ -162,7 +187,7 @@ __decorate([
 ], OrdersController.prototype, "removeHistory", null);
 exports.OrdersController = OrdersController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('resort', 'superadmin'),
+    (0, roles_decorator_1.Roles)('resort', 'partnership', 'superadmin'),
     (0, common_1.Controller)('orders'),
     __param(0, (0, typeorm_1.InjectRepository)(package_account_entity_1.PackageAccount)),
     __param(1, (0, typeorm_1.InjectRepository)(history_item_entity_1.HistoryItem)),

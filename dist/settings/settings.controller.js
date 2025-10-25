@@ -33,7 +33,7 @@ let SettingsController = class SettingsController {
 exports.SettingsController = SettingsController;
 __decorate([
     (0, common_1.Get)('features'),
-    (0, roles_decorator_1.Roles)('superadmin', 'resort'),
+    (0, roles_decorator_1.Roles)('superadmin', 'resort', 'partnership'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)

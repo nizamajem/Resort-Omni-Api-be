@@ -33,6 +33,22 @@ let PaymentsController = class PaymentsController {
         this.settings = settings;
         this.pkgKeys = ['1h', '3h', '12h', '1d'];
     }
+    canAccessPackage(features, pkg, role) {
+        if (!features?.packages || features.packages[pkg] === false) {
+            return false;
+        }
+        if (role === 'superadmin') {
+            return true;
+        }
+        const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
+        if (!allowed || allowed.length === 0) {
+            return true;
+        }
+        if (!role) {
+            return false;
+        }
+        return allowed.includes(role);
+    }
     resolveMode(mode) {
         if (mode === 'production')
             return 'production';
@@ -131,6 +147,9 @@ let PaymentsController = class PaymentsController {
         const featureKey = mode === 'production' ? 'midtransProduction' : 'midtransSandbox';
         if (!features.packages[pkgId])
             return { error: 'Package disabled' };
+        const role = req?.user?.role || null;
+        if (!this.canAccessPackage(features, pkgId, role))
+            return { error: 'Package not available for your role' };
         if (!features.payments[featureKey])
             return { error: 'Online payment disabled' };
         const candidates = await this.packages.find({ where: { pkg: pkgId, status: 'active' } });
@@ -204,7 +223,7 @@ __decorate([
 ], PaymentsController.prototype, "complete", null);
 exports.PaymentsController = PaymentsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('resort', 'superadmin'),
+    (0, roles_decorator_1.Roles)('resort', 'partnership', 'superadmin'),
     (0, common_1.Controller)('payments'),
     __param(0, (0, typeorm_1.InjectRepository)(package_account_entity_1.PackageAccount)),
     __param(1, (0, typeorm_1.InjectRepository)(history_item_entity_1.HistoryItem)),

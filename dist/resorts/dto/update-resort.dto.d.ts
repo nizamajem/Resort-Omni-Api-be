@@ -4,4 +4,5 @@ export declare class UpdateResortDto {
     email?: string;
     password?: string;
     status?: 'active' | 'disabled';
+    role?: 'resort' | 'partnership';
 }

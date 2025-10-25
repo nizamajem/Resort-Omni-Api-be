@@ -41,4 +41,9 @@ __decorate([
     (0, class_validator_1.IsIn)(['active', 'disabled']),
     __metadata("design:type", String)
 ], UpdateResortDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['resort', 'partnership']),
+    __metadata("design:type", String)
+], UpdateResortDto.prototype, "role", void 0);
 //# sourceMappingURL=update-resort.dto.js.map

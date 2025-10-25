@@ -32,6 +32,10 @@ __decorate([
     __metadata("design:type", String)
 ], ResortAccount.prototype, "password", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 30, default: 'resort' }),
+    __metadata("design:type", String)
+], ResortAccount.prototype, "role", void 0);
+__decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'active' }),
     __metadata("design:type", String)
 ], ResortAccount.prototype, "status", void 0);

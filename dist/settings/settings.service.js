@@ -17,8 +17,15 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const setting_entity_1 = require("../entities/setting.entity");
+const ALLOWED_PACKAGE_ROLES = ['resort', 'partnership'];
 const DEFAULT_FEATURES = {
     packages: { '1h': true, '3h': true, '12h': true, '1d': true },
+    packageRoles: {
+        '1h': ['resort', 'partnership'],
+        '3h': ['resort', 'partnership'],
+        '12h': ['resort', 'partnership'],
+        '1d': ['resort', 'partnership'],
+    },
     payments: { cash: true, midtransSandbox: true, midtransProduction: true },
     packagePrices: { '1h': 65000, '3h': 125000, '12h': 180000, '1d': 200000 },
     rentalExtras: { extraGraceMinutes: 10, extraHourlyRate: 65000, extraBlockMinutes: 60 },
@@ -53,12 +60,28 @@ let SettingsService = class SettingsService {
     async getFeatures() {
         const row = await this.loadFeatureRow();
         const value = (row.value || {});
+        const incomingRoles = value.packageRoles || {};
+        const packageRoles = {};
+        for (const key of Object.keys(DEFAULT_FEATURES.packageRoles)) {
+            const raw = incomingRoles[key];
+            if (Array.isArray(raw)) {
+                const normalized = Array.from(new Set(raw
+                    .map((role) => typeof role === 'string' ? role.toLowerCase().trim() : '')
+                    .filter((role) => ALLOWED_PACKAGE_ROLES.includes(role))));
+                if (normalized.length > 0) {
+                    packageRoles[key] = normalized;
+                    continue;
+                }
+            }
+            packageRoles[key] = [...DEFAULT_FEATURES.packageRoles[key]];
+        }
         return {
             packages: { ...DEFAULT_FEATURES.packages, ...(value.packages || {}) },
             payments: { ...DEFAULT_FEATURES.payments, ...(value.payments || {}) },
             packagePrices: { ...DEFAULT_FEATURES.packagePrices, ...(value.packagePrices || {}) },
             rentalExtras: { ...DEFAULT_FEATURES.rentalExtras, ...(value.rentalExtras || {}) },
-};
+            packageRoles,
+        };
     }
     async updateFeatures(input) {
         const row = await this.loadFeatureRow();
@@ -106,11 +129,28 @@ let SettingsService = class SettingsService {
                 }
             }
         }
+        const sanitizedPackageRoles = {};
+        if (input.packageRoles && typeof input.packageRoles === 'object') {
+            for (const key of Object.keys(DEFAULT_FEATURES.packageRoles)) {
+                if (Object.prototype.hasOwnProperty.call(input.packageRoles, key)) {
+                    const raw = input.packageRoles[key];
+                    if (Array.isArray(raw)) {
+                        const normalized = Array.from(new Set(raw
+                            .map((role) => typeof role === 'string' ? role.toLowerCase().trim() : '')
+                            .filter((role) => ALLOWED_PACKAGE_ROLES.includes(role))));
+                        if (normalized.length > 0 || raw.length === 0) {
+                            sanitizedPackageRoles[key] = normalized;
+                        }
+                    }
+                }
+            }
+        }
         const next = {
             packages: { ...current.packages, ...sanitizedPackages },
             payments: { ...current.payments, ...sanitizedPayments },
             packagePrices: { ...current.packagePrices, ...sanitizedPackagePrices },
             rentalExtras: { ...current.rentalExtras, ...sanitizedRentalExtras },
+            packageRoles: { ...current.packageRoles, ...sanitizedPackageRoles },
         };
         row.value = next;
         await this.settings.save(row);

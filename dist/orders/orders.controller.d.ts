@@ -12,13 +12,10 @@ export declare class OrdersController {
     private readonly settings;
     private readonly pkgKeys;
     constructor(packages: Repository<PackageAccount>, histories: Repository<HistoryItem>, rentals: Repository<Rental>, settings: SettingsService);
-    availability(): Promise<{
-        enabled: Record<"1h" | "3h" | "1d", boolean>;
-        "1h": number;
-        "3h": number;
-        "1d": number;
+    availability(req: any): Promise<Record<"1h" | "3h" | "12h" | "1d", number> & {
+        enabled: Record<"1h" | "3h" | "12h" | "1d", boolean>;
     }>;
-    cash(body: CashOrderDto): Promise<{
+    cash(body: CashOrderDto, req: any): Promise<{
         error: string;
         credential?: undefined;
         history?: undefined;

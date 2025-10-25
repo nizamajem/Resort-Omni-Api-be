@@ -27,7 +27,7 @@ let CyclingController = class CyclingController {
         const role = req?.user?.role;
         const resortName = req?.user?.resortName;
         const where = {};
-        if (role === 'resort' && resortName) {
+        if ((role === 'resort' || role === 'partnership') && resortName) {
             where.resortName = resortName;
         }
         else if (role === 'superadmin' && resortFilter) {

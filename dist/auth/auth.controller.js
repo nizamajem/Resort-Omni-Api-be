@@ -43,7 +43,8 @@ let AuthController = class AuthController {
         if (!acc || acc.status !== 'active' || acc.password !== password) {
             return { error: 'Invalid credentials' };
         }
-        const payload = { email: acc.email, role: 'resort', resortName: acc.resortName };
+        const accRole = acc.role === 'partnership' ? 'partnership' : 'resort';
+        const payload = { email: acc.email, role: accRole, resortName: acc.resortName };
         const token = (0, jwt_util_1.signJwt)(payload, process.env.JWT_SECRET || 'devsecret');
         return { accessToken: token, user: payload };
     }
@@ -52,8 +53,8 @@ let AuthController = class AuthController {
     }
     async updateProfile(body, req) {
         const role = req?.user?.role;
-        if (role !== 'resort')
-            throw new common_1.ForbiddenException('Only resort accounts can update profile');
+        if (role !== 'resort' && role !== 'partnership')
+            throw new common_1.ForbiddenException('Only resort or partnership accounts can update profile');
         const currentEmail = req?.user?.email;
         if (!currentEmail)
             return { error: 'Missing user context' };
@@ -75,7 +76,8 @@ let AuthController = class AuthController {
         if (nextPassword)
             row.password = nextPassword;
         await this.resorts.save(row);
-        const payload = { email: row.email, role: 'resort', resortName: row.resortName };
+        const nextRole = row.role === 'partnership' ? 'partnership' : 'resort';
+        const payload = { email: row.email, role: nextRole, resortName: row.resortName };
         const token = (0, jwt_util_1.signJwt)(payload, process.env.JWT_SECRET || 'devsecret');
         return { ok: true, accessToken: token, user: payload };
     }

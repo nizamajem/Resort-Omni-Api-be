@@ -3,12 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppDataSource = void 0;
 require("reflect-metadata");
 const dotenv = require("dotenv");
-dotenv.config();
 const typeorm_1 = require("typeorm");
-const resort_account_entity_1 = require("./entities/resort-account.entity");
-const package_account_entity_1 = require("./entities/package-account.entity");
-const history_item_entity_1 = require("./entities/history-item.entity");
-const setting_entity_1 = require("./entities/setting.entity");
+const path_1 = require("path");
+dotenv.config();
+const isCompiled = __dirname.endsWith('dist') || __dirname.includes(`${path_1.sep}dist${path_1.sep}`);
+const distDir = isCompiled ? __dirname : (0, path_1.join)(__dirname, '..', 'dist');
+const entitiesGlob = (0, path_1.join)(distDir, 'entities', '*{.ts,.js}');
+const migrationsGlob = (0, path_1.join)(__dirname, 'migrations', '*{.ts,.js}');
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -16,8 +17,8 @@ exports.AppDataSource = new typeorm_1.DataSource({
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASS || 'postgres',
     database: process.env.DB_NAME || 'resort',
-    entities: [resort_account_entity_1.ResortAccount, package_account_entity_1.PackageAccount, history_item_entity_1.HistoryItem, setting_entity_1.Setting],
-    migrations: [__dirname + '/migrations/*{.ts,.js}'],
+    entities: [entitiesGlob],
+    migrations: [migrationsGlob],
     synchronize: false,
     logging: false,
 });

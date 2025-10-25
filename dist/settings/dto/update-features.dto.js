@@ -33,5 +33,10 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
+], UpdateFeaturesDto.prototype, "packageRoles", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
 ], UpdateFeaturesDto.prototype, "rentalExtras", void 0);
 //# sourceMappingURL=update-features.dto.js.map
