@@ -106,7 +106,7 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(50),
+    (0, class_validator_1.MaxLength)(64),
     __metadata("design:type", String)
 ], StartRentalDto.prototype, "customPackageId", void 0);
 __decorate([
