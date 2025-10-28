@@ -25,6 +25,7 @@ const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const roles_guard_1 = require("../auth/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 const settings_service_1 = require("../settings/settings.service");
+const CUSTOM_PACKAGE_ROLES = ['resort', 'partnership'];
 let OrdersController = class OrdersController {
     constructor(packages, histories, rentals, settings) {
         this.packages = packages;
@@ -34,25 +35,49 @@ let OrdersController = class OrdersController {
         this.pkgKeys = ['1h', '3h', '12h', '1d'];
     }
     canAccessPackage(features, pkg, role) {
-        if (!features?.packages || features.packages[pkg] === false) {
+        if (this.pkgKeys.includes(pkg)) {
+            if (!features?.packages || features.packages[pkg] === false) {
+                return false;
+            }
+            if (role === 'superadmin') {
+                return true;
+            }
+            const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
+            if (!allowed || allowed.length === 0) {
+                return true;
+            }
+            if (!role) {
+                return false;
+            }
+            return allowed.includes(role);
+        }
+        const customList = Array.isArray(features?.customPackages)
+            ? features.customPackages.filter((item) => item && item.enabled !== false)
+            : [];
+        const found = customList.find((item) => item?.id === pkg);
+        if (!found) {
             return false;
         }
         if (role === 'superadmin') {
             return true;
         }
-        const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
-        if (!allowed || allowed.length === 0) {
+        const allowedRoles = Array.isArray(found?.roles)
+            ? Array.from(new Set(found.roles
+                .map((entry) => typeof entry === 'string' ? entry.toLowerCase().trim() : '')
+                .filter((entry) => CUSTOM_PACKAGE_ROLES.includes(entry))))
+            : CUSTOM_PACKAGE_ROLES.slice();
+        if (allowedRoles.length === 0) {
             return true;
         }
         if (!role) {
             return false;
         }
-        return allowed.includes(role);
+        return allowedRoles.includes(role);
     }
     async availability(req) {
         const features = await this.settings.getFeatures();
-        const counts = { '1h': 0, '3h': 0, '12h': 0, '1d': 0 };
-        const enabled = { '1h': false, '3h': false, '12h': false, '1d': false };
+        const counts = {};
+        const enabled = {};
         const role = req?.user?.role || null;
         await Promise.all(this.pkgKeys.map(async (pkg) => {
             const allow = this.canAccessPackage(features, pkg, role);
@@ -64,23 +89,102 @@ let OrdersController = class OrdersController {
                 counts[pkg] = 0;
             }
         }));
+        const customList = Array.isArray(features?.customPackages) ? features.customPackages.filter((item) => item && item.enabled !== false) : [];
+        for (const item of customList) {
+            const id = String(item.id || '').trim();
+            if (!id) {
+                continue;
+            }
+            const allow = this.canAccessPackage(features, id, role);
+            enabled[id] = allow;
+            if (allow) {
+                counts[id] = await this.packages.count({ where: { pkg: id, status: 'active' } });
+            }
+            else {
+                counts[id] = 0;
+            }
+        }
         return { ...counts, enabled };
     }
     async cash(body, req) {
         const { pkg, packageName, price, duration, resortName, guestName, roomNumber } = body || {};
-        if (!pkg || !packageName || !price)
+        if (!pkg)
             return { error: 'Missing fields' };
         const pkgId = String(pkg);
-        if (!this.pkgKeys.includes(pkgId))
-            return { error: 'Invalid package' };
         const features = await this.settings.getFeatures();
-        if (!features.packages[pkgId])
-            return { error: 'Package disabled' };
-        const role = req?.user?.role || null;
-        if (!this.canAccessPackage(features, pkgId, role))
-            return { error: 'Package not available for your role' };
         if (!features.payments.cash)
             return { error: 'Cash payment disabled' };
+        const role = req?.user?.role || null;
+        const customList = Array.isArray(features?.customPackages)
+            ? features.customPackages.filter((item) => item && item.enabled !== false)
+            : [];
+        const customMap = new Map(customList.map((item) => [String(item.id || '').trim(), item]));
+        const isCustom = customMap.has(pkgId);
+        if (!isCustom && !this.pkgKeys.includes(pkgId))
+            return { error: 'Invalid package' };
+        if (!this.canAccessPackage(features, pkgId, role))
+            return { error: 'Package not available for your role' };
+        if (isCustom) {
+            const selected = customMap.get(pkgId);
+            if (!selected)
+                return { error: 'Custom package not found' };
+            const blockMinutesBase = Number(selected.blockMinutes);
+            const blockMinutes = Number.isFinite(blockMinutesBase) && blockMinutesBase > 0 ? Math.round(blockMinutesBase) : 1;
+            const priceCandidate = Number(price ?? selected.pricePerBlock);
+            const pricePerBlock = Number.isFinite(priceCandidate) && priceCandidate > 0
+                ? Math.round(priceCandidate)
+                : Math.round(Number(selected.pricePerBlock ?? 0));
+            if (!Number.isFinite(pricePerBlock) || pricePerBlock <= 0)
+                return { error: 'Invalid custom price' };
+            const resolvedName = (packageName && String(packageName).trim()) || selected.name || selected.id || 'Custom Package';
+            const resolvedDuration = duration ? String(duration) : `Per ${blockMinutes} minutes`;
+            const candidates = await this.packages.find({ where: { pkg: pkgId, status: 'active' } });
+            if (candidates.length === 0)
+                return { error: 'No active account available' };
+            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+            chosen.status = 'sold';
+            await this.packages.save(chosen);
+            const hist = this.histories.create({
+                resortName: resortName || 'Unknown Resort',
+                userEmail: chosen.email,
+                userPassword: chosen.password,
+                packageName: resolvedName,
+                price: pricePerBlock,
+                duration: resolvedDuration,
+                status: 'success',
+                paymentMethod: 'cash',
+            });
+            await this.histories.save(hist);
+            try {
+                const rental = this.rentals.create({
+                    resortName: resortName || 'Unknown Resort',
+                    guestName: guestName || 'Guest',
+                    roomNumber: roomNumber || '-',
+                    pkg: pkgId,
+                    packageName: resolvedName,
+                    basePrice: pricePerBlock,
+                    baseMinutes: blockMinutes,
+                    startedAt: Date.now(),
+                    status: 'active',
+                    billingMode: 'tiered',
+                    customPackageId: selected.id,
+                    customBlockMinutes: blockMinutes,
+                    customBlockRate: pricePerBlock,
+                    credentialEmail: chosen.email,
+                    credentialPassword: chosen.password,
+                });
+                await this.rentals.save(rental);
+                if ('credentialPassword' in rental) {
+                    delete rental.credentialPassword;
+                }
+                return { credential: { email: chosen.email, password: chosen.password }, history: hist, rental };
+            }
+            catch (e) {
+                return { credential: { email: chosen.email, password: chosen.password }, history: hist };
+            }
+        }
+        if (!packageName || !price)
+            return { error: 'Missing fields' };
         const candidates = await this.packages.find({ where: { pkg: pkgId, status: 'active' } });
         if (candidates.length === 0)
             return { error: 'No active account available' };

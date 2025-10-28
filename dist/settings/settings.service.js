@@ -18,6 +18,111 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const setting_entity_1 = require("../entities/setting.entity");
 const ALLOWED_PACKAGE_ROLES = ['resort', 'partnership'];
+const slugifyId = (value, fallback = '') => {
+    const makeSlug = (input) => String(input || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48);
+    const primary = makeSlug(value);
+    if (primary) {
+        return primary;
+    }
+    const secondary = makeSlug(fallback);
+    if (secondary) {
+        return secondary;
+    }
+    return '';
+};
+const sanitizeCustomPackages = (input, fallback) => {
+    const fallbackIndex = new Map();
+    if (Array.isArray(fallback)) {
+        for (const item of fallback) {
+            if (item && typeof item.id === 'string') {
+                fallbackIndex.set(item.id, Object.assign({}, item));
+            }
+        }
+    }
+    if (!Array.isArray(input)) {
+        return Array.isArray(fallback) ? fallback.slice() : [];
+    }
+    const result = [];
+    const seen = new Set();
+    for (const raw of input) {
+        if (!raw || typeof raw !== 'object') {
+            continue;
+        }
+        const providedId = typeof raw.id === 'string' ? raw.id : '';
+        const fallbackItem = fallbackIndex.get(providedId) || null;
+        const providedName = typeof raw.name === 'string' ? raw.name.trim() : '';
+        const nameSource = providedName || (fallbackItem?.name || '');
+        let id = slugifyId(providedId || nameSource, fallbackItem?.id || nameSource);
+        if (!id) {
+            id = `custom-${result.length + 1}`;
+        }
+        if (seen.has(id)) {
+            continue;
+        }
+        const minutesRaw = Number(raw.blockMinutes);
+        const fallbackMinutes = Number(fallbackItem?.blockMinutes);
+        const blockMinutes = Number.isFinite(minutesRaw) && minutesRaw > 0
+            ? Math.round(minutesRaw)
+            : (Number.isFinite(fallbackMinutes) && fallbackMinutes > 0
+                ? Math.round(fallbackMinutes)
+                : NaN);
+        if (!Number.isFinite(blockMinutes) || blockMinutes <= 0) {
+            continue;
+        }
+        const rateRaw = Number(raw.pricePerBlock);
+        const fallbackRate = Number(fallbackItem?.pricePerBlock);
+        const pricePerBlock = Number.isFinite(rateRaw) && rateRaw > 0
+            ? Math.round(rateRaw)
+            : (Number.isFinite(fallbackRate) && fallbackRate > 0
+                ? Math.round(fallbackRate)
+                : NaN);
+        if (!Number.isFinite(pricePerBlock) || pricePerBlock <= 0) {
+            continue;
+        }
+        const enabled = raw.enabled === false
+            ? false
+            : raw.enabled === true
+                ? true
+                : (fallbackItem ? fallbackItem.enabled !== false : true);
+        let description = typeof raw.description === 'string' ? raw.description.trim() : undefined;
+        if ((!description || description.length === 0) && typeof (fallbackItem?.description) === 'string') {
+            description = fallbackItem.description;
+        }
+        let rolesSource = Array.isArray(raw.roles) ? raw.roles : undefined;
+        if (!rolesSource && Array.isArray(fallbackItem?.roles)) {
+            rolesSource = fallbackItem.roles;
+        }
+        let normalizedRoles = Array.isArray(rolesSource)
+            ? Array.from(new Set(rolesSource
+                .map((role) => typeof role === 'string' ? role.toLowerCase().trim() : '')
+                .filter((role) => ALLOWED_PACKAGE_ROLES.includes(role))))
+            : [];
+        if (normalizedRoles.length === 0) {
+            normalizedRoles = ALLOWED_PACKAGE_ROLES.slice();
+        }
+        const normalized = {
+            id,
+            name: nameSource || id,
+            blockMinutes,
+            pricePerBlock,
+            enabled,
+            roles: normalizedRoles,
+        };
+        if (description && description.length > 0) {
+            normalized.description = description;
+        }
+        result.push(normalized);
+        seen.add(id);
+        if (result.length >= 64) {
+            break;
+        }
+    }
+    return result;
+};
 const DEFAULT_FEATURES = {
     packages: { '1h': true, '3h': true, '12h': true, '1d': true },
     packageRoles: {
@@ -29,6 +134,7 @@ const DEFAULT_FEATURES = {
     payments: { cash: true, midtransSandbox: true, midtransProduction: true },
     packagePrices: { '1h': 65000, '3h': 125000, '12h': 180000, '1d': 200000 },
     rentalExtras: { extraGraceMinutes: 10, extraHourlyRate: 65000, extraBlockMinutes: 60 },
+    customPackages: [],
 };
 let SettingsService = class SettingsService {
     constructor(settings) {
@@ -75,12 +181,14 @@ let SettingsService = class SettingsService {
             }
             packageRoles[key] = [...DEFAULT_FEATURES.packageRoles[key]];
         }
+        const customPackages = sanitizeCustomPackages(value.customPackages, DEFAULT_FEATURES.customPackages);
         return {
             packages: { ...DEFAULT_FEATURES.packages, ...(value.packages || {}) },
             payments: { ...DEFAULT_FEATURES.payments, ...(value.payments || {}) },
             packagePrices: { ...DEFAULT_FEATURES.packagePrices, ...(value.packagePrices || {}) },
             rentalExtras: { ...DEFAULT_FEATURES.rentalExtras, ...(value.rentalExtras || {}) },
             packageRoles,
+            customPackages,
         };
     }
     async updateFeatures(input) {
@@ -145,12 +253,17 @@ let SettingsService = class SettingsService {
                 }
             }
         }
+        let nextCustomPackages = current.customPackages || [];
+        if (Object.prototype.hasOwnProperty.call(input, 'customPackages')) {
+            nextCustomPackages = sanitizeCustomPackages(input.customPackages, current.customPackages || []);
+        }
         const next = {
             packages: { ...current.packages, ...sanitizedPackages },
             payments: { ...current.payments, ...sanitizedPayments },
             packagePrices: { ...current.packagePrices, ...sanitizedPackagePrices },
             rentalExtras: { ...current.rentalExtras, ...sanitizedRentalExtras },
             packageRoles: { ...current.packageRoles, ...sanitizedPackageRoles },
+            customPackages: nextCustomPackages,
         };
         row.value = next;
         await this.settings.save(row);

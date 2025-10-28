@@ -1,9 +1,12 @@
 export declare class CashOrderDto {
     pkg: string;
-    packageName: string;
-    price: number;
+    packageName?: string;
+    price?: number;
     duration?: string;
     resortName?: string;
     guestName?: string;
     roomNumber?: string;
+    customPackageId?: string;
+    customBlockMinutes?: number;
+    customBlockRate?: number;
 }

@@ -4,4 +4,5 @@ export declare class UpdateFeaturesDto {
     packagePrices?: Record<string, any>;
     packageRoles?: Record<string, any>;
     rentalExtras?: Record<string, any>;
+    customPackages?: any[];
 }

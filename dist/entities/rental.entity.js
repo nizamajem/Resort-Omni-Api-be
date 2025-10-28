@@ -93,6 +93,30 @@ __decorate([
     __metadata("design:type", String)
 ], Rental.prototype, "credentialPassword", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'standard' }),
+    __metadata("design:type", String)
+], Rental.prototype, "billingMode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 64, nullable: true }),
+    __metadata("design:type", String)
+], Rental.prototype, "customPackageId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Rental.prototype, "customBlockMinutes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Rental.prototype, "customBlockRate", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Rental.prototype, "customBlocksUsed", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Rental.prototype, "customElapsedMinutes", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Rental.prototype, "createdAt", void 0);

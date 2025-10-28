@@ -12,8 +12,8 @@ export declare class OrdersController {
     private readonly settings;
     private readonly pkgKeys;
     constructor(packages: Repository<PackageAccount>, histories: Repository<HistoryItem>, rentals: Repository<Rental>, settings: SettingsService);
-    availability(req: any): Promise<Record<"1h" | "3h" | "12h" | "1d", number> & {
-        enabled: Record<"1h" | "3h" | "12h" | "1d", boolean>;
+    availability(req: any): Promise<Record<string, number> & {
+        enabled: Record<string, boolean>;
     }>;
     cash(body: CashOrderDto, req: any): Promise<{
         error: string;
@@ -24,18 +24,10 @@ export declare class OrdersController {
         credential: {
             email: string;
             password: string;
-        };
+        } | null;
         history: HistoryItem;
-        rental: Rental;
+        rental?: Rental;
         error?: undefined;
-    } | {
-        credential: {
-            email: string;
-            password: string;
-        };
-        history: HistoryItem;
-        error?: undefined;
-        rental?: undefined;
     }>;
     history(query: HistoryQueryDto, req: any): Promise<HistoryItem[]>;
     removeHistory(id: string, req: any): Promise<{ ok: boolean } | { error: string }>;

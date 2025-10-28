@@ -22,6 +22,7 @@ const roles_guard_1 = require("../auth/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 const class_validator_1 = require("class-validator");
 const settings_service_1 = require("../settings/settings.service");
+const CUSTOM_PACKAGE_ROLES = ['resort', 'partnership'];
 const DEFAULT_EXTRAS = { rate: 65000, block: 60, grace: 10 };
 const sanitizeRentalResponse = (row) => {
     if (!row) {
@@ -47,7 +48,7 @@ class StartRentalDto {
 }
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(['1h', '3h', '12h', '1d']),
+    (0, class_validator_1.MaxLength)(64),
     __metadata("design:type", String)
 ], StartRentalDto.prototype, "pkg", void 0);
 __decorate([
@@ -96,6 +97,28 @@ __decorate([
     (0, class_validator_1.MaxLength)(200),
     __metadata("design:type", String)
 ], StartRentalDto.prototype, "credentialPassword", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(20),
+    __metadata("design:type", String)
+], StartRentalDto.prototype, "billingMode", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(50),
+    __metadata("design:type", String)
+], StartRentalDto.prototype, "customPackageId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], StartRentalDto.prototype, "customBlockMinutes", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], StartRentalDto.prototype, "customBlockRate", void 0);
 class EndRentalDto {
 }
 __decorate([
@@ -126,20 +149,45 @@ let RentalsController = class RentalsController {
         this.settings = settings;
     }
     canAccessPackage(features, pkg, role) {
-        if (!features?.packages || features.packages[pkg] === false) {
+        const baseKeys = ['1h', '3h', '12h', '1d'];
+        if (baseKeys.includes(pkg)) {
+            if (!features?.packages || features.packages[pkg] === false) {
+                return false;
+            }
+            if (role === 'superadmin') {
+                return true;
+            }
+            const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
+            if (!allowed || allowed.length === 0) {
+                return true;
+            }
+            if (!role) {
+                return false;
+            }
+            return allowed.includes(role);
+        }
+        const customList = Array.isArray(features?.customPackages)
+            ? features.customPackages.filter((item) => item && item.enabled !== false)
+            : [];
+        const found = customList.find((item) => item?.id === pkg);
+        if (!found) {
             return false;
         }
         if (role === 'superadmin') {
             return true;
         }
-        const allowed = Array.isArray(features?.packageRoles?.[pkg]) ? features.packageRoles[pkg] : null;
-        if (!allowed || allowed.length === 0) {
+        const allowedRoles = Array.isArray(found?.roles)
+            ? Array.from(new Set(found.roles
+                .map((entry) => typeof entry === 'string' ? entry.toLowerCase().trim() : '')
+                .filter((entry) => CUSTOM_PACKAGE_ROLES.includes(entry))))
+            : CUSTOM_PACKAGE_ROLES.slice();
+        if (allowedRoles.length === 0) {
             return true;
         }
         if (!role) {
             return false;
         }
-        return allowed.includes(role);
+        return allowedRoles.includes(role);
     }
     async resolveExtras() {
         try {
@@ -182,15 +230,61 @@ let RentalsController = class RentalsController {
     async start(body, req) {
         const { pkg, packageName, price, duration, guestName, roomNumber } = body || {};
         const resortName = req?.user?.resortName || body?.resortName || 'Unknown Resort';
-        if (!pkg || !packageName || !price || !guestName || !roomNumber)
+        if (!pkg || !guestName || !roomNumber)
             return { error: 'Missing fields' };
         const pkgId = String(pkg);
         const features = await this.settings.getFeatures();
-        if (!features.packages[pkgId])
-            return { error: 'Package disabled' };
         const role = req?.user?.role || null;
+        const customList = Array.isArray(features?.customPackages)
+            ? features.customPackages.filter((item) => item && item.enabled !== false)
+            : [];
+        const customMap = new Map(customList.map((item) => [String(item.id || '').trim(), item]));
+        const baseKeys = ['1h', '3h', '12h', '1d'];
+        const isCustom = customMap.has(pkgId);
+        if (!isCustom && !baseKeys.includes(pkgId))
+            return { error: 'Invalid package' };
         if (!this.canAccessPackage(features, pkgId, role))
             return { error: 'Package not available for your role' };
+        if (isCustom) {
+            const selected = customMap.get(pkgId);
+            if (!selected)
+                return { error: 'Custom package not found' };
+            const blockMinutesBase = Number(selected.blockMinutes);
+            const blockMinutes = Number.isFinite(blockMinutesBase) && blockMinutesBase > 0 ? Math.round(blockMinutesBase) : 1;
+            const rateCandidate = Number(price ?? selected.pricePerBlock);
+            const pricePerBlock = Number.isFinite(rateCandidate) && rateCandidate > 0
+                ? Math.round(rateCandidate)
+                : Math.round(Number(selected.pricePerBlock ?? 0));
+            if (!Number.isFinite(pricePerBlock) || pricePerBlock <= 0)
+                return { error: 'Invalid custom price' };
+            const resolvedName = (packageName && String(packageName).trim()) || selected.name || selected.id || 'Custom Package';
+            const rental = this.rentals.create({
+                resortName,
+                guestName,
+                roomNumber,
+                pkg: pkgId,
+                packageName: resolvedName,
+                basePrice: pricePerBlock,
+                baseMinutes: blockMinutes,
+                startedAt: Date.now(),
+                status: 'active',
+                billingMode: 'tiered',
+                customPackageId: selected.id,
+                customBlockMinutes: blockMinutes,
+                customBlockRate: pricePerBlock,
+                customBlocksUsed: 0,
+            });
+            if (body?.credentialEmail) {
+                rental.credentialEmail = String(body.credentialEmail).trim();
+            }
+            if (body?.credentialPassword) {
+                rental.credentialPassword = String(body.credentialPassword);
+            }
+            await this.rentals.save(rental);
+            return sanitizeRentalResponse(rental);
+        }
+        if (!packageName || !price)
+            return { error: 'Missing fields' };
         const baseMinutes = pkgId === '1h' ? 60 : pkgId === '3h' ? 180 : pkgId === '12h' ? 720 : 1440;
         const rental = this.rentals.create({
             resortName,
@@ -223,8 +317,27 @@ let RentalsController = class RentalsController {
             return sanitizeRentalResponse(row);
         const endAt = Date.now();
         const elapsedM = Math.max(0, Math.ceil((endAt - row.startedAt) / 60000));
-        const extraMinutes = Math.max(0, elapsedM - row.baseMinutes);
         const extras = await this.resolveExtras();
+        if ((row.billingMode || '') === 'tiered') {
+            const blockMinutesRaw = Number(row.customBlockMinutes || row.baseMinutes || extras.block);
+            const rateRaw = Number(row.customBlockRate || row.basePrice || extras.rate);
+            const blockMinutes = Number.isFinite(blockMinutesRaw) && blockMinutesRaw > 0
+                ? Math.max(1, Math.round(blockMinutesRaw))
+                : Math.max(1, extras.block);
+            const rate = Number.isFinite(rateRaw) && rateRaw > 0
+                ? Math.round(rateRaw)
+                : Math.max(1, extras.rate);
+            const blocksUsed = blockMinutes > 0 ? Math.ceil(elapsedM / blockMinutes) : 0;
+            const due = Math.max(0, blocksUsed) * rate;
+            row.endedAt = endAt;
+            row.status = 'unpaid';
+            row.amountDue = due;
+            row.customBlocksUsed = Math.max(0, blocksUsed);
+            row.customElapsedMinutes = elapsedM;
+            await this.rentals.save(row);
+            return sanitizeRentalResponse(row);
+        }
+        const extraMinutes = Math.max(0, elapsedM - row.baseMinutes);
         const chargeableMinutes = Math.max(0, extraMinutes - extras.grace);
         const extraBlocks = Math.max(0, Math.ceil(chargeableMinutes / extras.block));
         const due = row.basePrice + extraBlocks * extras.rate;
