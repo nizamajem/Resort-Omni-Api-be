@@ -32,7 +32,7 @@ __decorate([
     __metadata("design:type", String)
 ], Rental.prototype, "roomNumber", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 10 }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 64 }),
     __metadata("design:type", String)
 ], Rental.prototype, "pkg", void 0);
 __decorate([
