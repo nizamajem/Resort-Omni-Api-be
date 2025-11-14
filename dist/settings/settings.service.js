@@ -88,6 +88,11 @@ const sanitizeCustomPackages = (input, fallback) => {
             : raw.enabled === true
                 ? true
                 : (fallbackItem ? fallbackItem.enabled !== false : true);
+        const showPrice = raw.showPrice === false
+            ? false
+            : raw.showPrice === true
+                ? true
+                : (fallbackItem ? fallbackItem.showPrice !== false : true);
         let description = typeof raw.description === 'string' ? raw.description.trim() : undefined;
         if ((!description || description.length === 0) && typeof (fallbackItem?.description) === 'string') {
             description = fallbackItem.description;
@@ -110,6 +115,7 @@ const sanitizeCustomPackages = (input, fallback) => {
             blockMinutes,
             pricePerBlock,
             enabled,
+            showPrice,
             roles: normalizedRoles,
         };
         if (description && description.length > 0) {
@@ -181,7 +187,7 @@ let SettingsService = class SettingsService {
             }
             packageRoles[key] = [...DEFAULT_FEATURES.packageRoles[key]];
         }
-        const customPackages = sanitizeCustomPackages(value.customPackages, DEFAULT_FEATURES.customPackages);
+        const customPackages = sanitizeCustomPackages(value.customPackages, DEFAULT_FEATURES.customPackages).map((pkg) => (Object.assign(Object.assign({}, pkg), { showPrice: pkg.showPrice !== false })));
         return {
             packages: { ...DEFAULT_FEATURES.packages, ...(value.packages || {}) },
             payments: { ...DEFAULT_FEATURES.payments, ...(value.payments || {}) },
@@ -255,7 +261,7 @@ let SettingsService = class SettingsService {
         }
         let nextCustomPackages = current.customPackages || [];
         if (Object.prototype.hasOwnProperty.call(input, 'customPackages')) {
-            nextCustomPackages = sanitizeCustomPackages(input.customPackages, current.customPackages || []);
+            nextCustomPackages = sanitizeCustomPackages(input.customPackages, current.customPackages || []).map((pkg) => (Object.assign(Object.assign({}, pkg), { showPrice: pkg.showPrice !== false })));
         }
         const next = {
             packages: { ...current.packages, ...sanitizedPackages },
